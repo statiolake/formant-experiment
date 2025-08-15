@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Formant Synthesizer - 母音合成実験</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f8fafc;
+        color: #334155;
+        line-height: 1.6;
+        padding: 2rem;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      .subtitle {
+        opacity: 0.9;
+        font-size: 1rem;
+      }
+
+      .content {
+        padding: 2rem;
+      }
+
+      .preset-section {
+        margin-bottom: 2rem;
+      }
+
+      .section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #1e293b;
+      }
+
+      .preset-buttons {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem;
+      }
+
+      .preset-btn {
+        padding: 0.75rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        color: #64748b;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .preset-btn:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+      }
+
+      .preset-btn.active {
+        background: #3b82f6;
+        border-color: #3b82f6;
+        color: white;
+      }
+
+      .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .control-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.5rem;
+      }
+
+      .control-section h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #1e293b;
+      }
+
+      .control-group {
+        margin-bottom: 1.5rem;
+      }
+
+      .control-group:last-child {
+        margin-bottom: 0;
+      }
+
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #e2e8f0;
+        outline: none;
+        margin-bottom: 0.5rem;
+        -webkit-appearance: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .value-display {
+        text-align: center;
+        padding: 0.5rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-family: "SF Mono", Monaco, monospace;
+        font-size: 0.875rem;
+        color: #374151;
+      }
+
+      .control-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+
+      .btn {
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 120px;
+      }
+
+      .btn-primary {
+        background: #10b981;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #059669;
+      }
+
+      .btn-secondary {
+        background: #ef4444;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background: #dc2626;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .info-panel {
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+      }
+
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .info-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .info-label {
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .info-value {
+        font-family: "SF Mono", Monaco, monospace;
+        color: #3b82f6;
+        font-weight: 500;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          padding: 1rem;
+        }
+
+        .content {
+          padding: 1.5rem;
+        }
+
+        .controls-grid {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+
+        .preset-buttons {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .control-buttons {
+          flex-direction: column;
+          align-items: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎵 Formant Synthesizer</h1>
+        <div class="subtitle">母音合成実験ツール</div>
+      </div>
+
+      <div class="content">
+        <div class="preset-section">
+          <div class="section-title">母音プリセット</div>
+          <div class="preset-buttons">
+            <button class="preset-btn" data-vowel="a">A</button>
+            <button class="preset-btn" data-vowel="i">I</button>
+            <button class="preset-btn" data-vowel="u">U</button>
+            <button class="preset-btn" data-vowel="e">E</button>
+            <button class="preset-btn" data-vowel="o">O</button>
+          </div>
+        </div>
+
+        <div class="controls-grid">
+          <div class="control-section">
+            <h3>基音と倍音</h3>
+
+            <div class="control-group">
+              <label for="fundamental">基本周波数 (F0)</label>
+              <input
+                type="range"
+                id="fundamental"
+                min="80"
+                max="800"
+                value="150"
+                step="1"
+              />
+              <div class="value-display" id="fundamental-value">150 Hz</div>
+            </div>
+
+            <div class="control-group">
+              <label for="harmonics">倍音の数</label>
+              <input
+                type="range"
+                id="harmonics"
+                min="5"
+                max="50"
+                value="20"
+                step="1"
+              />
+              <div class="value-display" id="harmonics-value">20 harmonics</div>
+            </div>
+
+            <div class="control-group">
+              <label for="harmonic-rolloff">倍音減衰 (dB/octave)</label>
+              <input
+                type="range"
+                id="harmonic-rolloff"
+                min="3"
+                max="12"
+                value="6"
+                step="0.5"
+              />
+              <div class="value-display" id="harmonic-rolloff-value">
+                -6 dB/oct
+              </div>
+            </div>
+          </div>
+
+          <div class="control-section">
+            <h3>フォルマント設定</h3>
+
+            <div class="control-group">
+              <label for="f1-freq">F1 周波数</label>
+              <input
+                type="range"
+                id="f1-freq"
+                min="200"
+                max="1000"
+                value="730"
+                step="10"
+              />
+              <div class="value-display" id="f1-freq-value">730 Hz</div>
+            </div>
+
+            <div class="control-group">
+              <label for="f1-amp">F1 振幅</label>
+              <input
+                type="range"
+                id="f1-amp"
+                min="0"
+                max="100"
+                value="80"
+                step="1"
+              />
+              <div class="value-display" id="f1-amp-value">80%</div>
+            </div>
+
+            <div class="control-group">
+              <label for="f2-freq">F2 周波数</label>
+              <input
+                type="range"
+                id="f2-freq"
+                min="800"
+                max="3000"
+                value="1090"
+                step="10"
+              />
+              <div class="value-display" id="f2-freq-value">1090 Hz</div>
+            </div>
+
+            <div class="control-group">
+              <label for="f2-amp">F2 振幅</label>
+              <input
+                type="range"
+                id="f2-amp"
+                min="0"
+                max="100"
+                value="60"
+                step="1"
+              />
+              <div class="value-display" id="f2-amp-value">60%</div>
+            </div>
+
+            <div class="control-group">
+              <label for="f3-freq">F3 周波数</label>
+              <input
+                type="range"
+                id="f3-freq"
+                min="2000"
+                max="4000"
+                value="2440"
+                step="10"
+              />
+              <div class="value-display" id="f3-freq-value">2440 Hz</div>
+            </div>
+
+            <div class="control-group">
+              <label for="f3-amp">F3 振幅</label>
+              <input
+                type="range"
+                id="f3-amp"
+                min="0"
+                max="100"
+                value="40"
+                step="1"
+              />
+              <div class="value-display" id="f3-amp-value">40%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="control-buttons">
+          <button class="btn btn-primary" id="play-btn">▶️ 再生</button>
+          <button class="btn btn-secondary" id="stop-btn">⏹️ 停止</button>
+        </div>
+
+        <div class="info-panel">
+          <div class="info-row">
+            <span class="info-label">現在の母音:</span>
+            <span class="info-value" id="current-vowel">Custom</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">基本周波数:</span>
+            <span class="info-value"><span id="info-f0">150</span> Hz</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">フォルマント:</span>
+            <span class="info-value">
+              F1: <span id="info-f1">730</span>Hz | F2:
+              <span id="info-f2">1090</span>Hz | F3:
+              <span id="info-f3">2440</span>Hz
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      class FormantSynthesizer {
+        constructor() {
+          this.audioContext = null;
+          this.oscillators = [];
+          this.gainNodes = [];
+          this.masterGain = null;
+          this.isPlaying = false;
+
+          // 母音のプリセット値 (成人男性の平均値)
+          this.vowelPresets = {
+            a: { f1: 730, f2: 1090, f3: 2440, f1Amp: 80, f2Amp: 60, f3Amp: 40 },
+            i: { f1: 270, f2: 2290, f3: 3010, f1Amp: 70, f2Amp: 85, f3Amp: 50 },
+            u: { f1: 300, f2: 870, f3: 2240, f1Amp: 85, f2Amp: 40, f3Amp: 35 },
+            e: { f1: 530, f2: 1840, f3: 2480, f1Amp: 75, f2Amp: 70, f3Amp: 45 },
+            o: { f1: 570, f2: 840, f3: 2410, f1Amp: 80, f2Amp: 50, f3Amp: 40 },
+          };
+
+          this.initializeControls();
+          this.bindEvents();
+        }
+
+        initializeControls() {
+          this.updateValueDisplays();
+          this.updateInfo();
+        }
+
+        bindEvents() {
+          // スライダーイベント
+          const sliders = document.querySelectorAll('input[type="range"]');
+          sliders.forEach((slider) => {
+            slider.addEventListener("input", () => {
+              this.updateValueDisplays();
+              this.updateInfo();
+              if (this.isPlaying) {
+                this.updateSound();
+              }
+            });
+          });
+
+          // プリセットボタン
+          document.querySelectorAll(".preset-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              this.setVowelPreset(e.target.dataset.vowel);
+
+              // アクティブボタンの更新
+              document
+                .querySelectorAll(".preset-btn")
+                .forEach((b) => b.classList.remove("active"));
+              e.target.classList.add("active");
+            });
+          });
+
+          // 再生/停止ボタン
+          document
+            .getElementById("play-btn")
+            .addEventListener("click", () => this.startSound());
+          document
+            .getElementById("stop-btn")
+            .addEventListener("click", () => this.stopSound());
+        }
+
+        updateValueDisplays() {
+          document.getElementById("fundamental-value").textContent =
+            document.getElementById("fundamental").value + " Hz";
+          document.getElementById("harmonics-value").textContent =
+            document.getElementById("harmonics").value + " harmonics";
+          document.getElementById("harmonic-rolloff-value").textContent =
+            "-" + document.getElementById("harmonic-rolloff").value + " dB/oct";
+
+          document.getElementById("f1-freq-value").textContent =
+            document.getElementById("f1-freq").value + " Hz";
+          document.getElementById("f1-amp-value").textContent =
+            document.getElementById("f1-amp").value + "%";
+          document.getElementById("f2-freq-value").textContent =
+            document.getElementById("f2-freq").value + " Hz";
+          document.getElementById("f2-amp-value").textContent =
+            document.getElementById("f2-amp").value + "%";
+          document.getElementById("f3-freq-value").textContent =
+            document.getElementById("f3-freq").value + " Hz";
+          document.getElementById("f3-amp-value").textContent =
+            document.getElementById("f3-amp").value + "%";
+        }
+
+        updateInfo() {
+          document.getElementById("info-f0").textContent =
+            document.getElementById("fundamental").value;
+          document.getElementById("info-f1").textContent =
+            document.getElementById("f1-freq").value;
+          document.getElementById("info-f2").textContent =
+            document.getElementById("f2-freq").value;
+          document.getElementById("info-f3").textContent =
+            document.getElementById("f3-freq").value;
+        }
+
+        setVowelPreset(vowel) {
+          const preset = this.vowelPresets[vowel];
+
+          document.getElementById("f1-freq").value = preset.f1;
+          document.getElementById("f1-amp").value = preset.f1Amp;
+          document.getElementById("f2-freq").value = preset.f2;
+          document.getElementById("f2-amp").value = preset.f2Amp;
+          document.getElementById("f3-freq").value = preset.f3;
+          document.getElementById("f3-amp").value = preset.f3Amp;
+
+          document.getElementById("current-vowel").textContent =
+            vowel.toUpperCase();
+
+          this.updateValueDisplays();
+          this.updateInfo();
+
+          if (this.isPlaying) {
+            this.updateSound();
+          }
+        }
+
+        async startSound() {
+          if (this.isPlaying) return;
+
+          try {
+            this.audioContext = new (window.AudioContext ||
+              window.webkitAudioContext)();
+            await this.audioContext.resume();
+
+            this.createSound();
+            this.isPlaying = true;
+
+            document.getElementById("play-btn").disabled = true;
+            document.getElementById("stop-btn").disabled = false;
+          } catch (error) {
+            console.error("Audio context error:", error);
+          }
+        }
+
+        createSound() {
+          const fundamental = parseFloat(
+            document.getElementById("fundamental").value,
+          );
+          const numHarmonics = parseInt(
+            document.getElementById("harmonics").value,
+          );
+          const rolloff = parseFloat(
+            document.getElementById("harmonic-rolloff").value,
+          );
+
+          // マスターゲイン
+          this.masterGain = this.audioContext.createGain();
+          this.masterGain.gain.value = 0.1;
+          this.masterGain.connect(this.audioContext.destination);
+
+          this.oscillators = [];
+          this.gainNodes = [];
+
+          for (let i = 1; i <= numHarmonics; i++) {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            osc.frequency.value = fundamental * i;
+            osc.type = "sine";
+
+            // 倍音の振幅を計算 (対数的減衰)
+            const harmonicAmplitude = 1 / Math.pow(i, rolloff / 6);
+
+            // フォルマントによる強調を計算
+            const formantAmplitude = this.calculateFormantAmplitude(
+              fundamental * i,
+            );
+
+            gain.gain.value = harmonicAmplitude * formantAmplitude;
+
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+
+            osc.start();
+
+            this.oscillators.push(osc);
+            this.gainNodes.push(gain);
+          }
+        }
+
+        calculateFormantAmplitude(frequency) {
+          const f1 = parseFloat(document.getElementById("f1-freq").value);
+          const f1Amp =
+            parseFloat(document.getElementById("f1-amp").value) / 100;
+          const f2 = parseFloat(document.getElementById("f2-freq").value);
+          const f2Amp =
+            parseFloat(document.getElementById("f2-amp").value) / 100;
+          const f3 = parseFloat(document.getElementById("f3-freq").value);
+          const f3Amp =
+            parseFloat(document.getElementById("f3-amp").value) / 100;
+
+          const bandwidth = 100; // フォルマント帯域幅
+
+          let amplitude = 0.1; // ベース振幅
+
+          // 各フォルマントからの寄与を計算
+          amplitude += f1Amp * this.gaussianResponse(frequency, f1, bandwidth);
+          amplitude += f2Amp * this.gaussianResponse(frequency, f2, bandwidth);
+          amplitude += f3Amp * this.gaussianResponse(frequency, f3, bandwidth);
+
+          return Math.min(amplitude, 1.0);
+        }
+
+        gaussianResponse(freq, center, bandwidth) {
+          const normalized = (freq - center) / bandwidth;
+          return Math.exp(-0.5 * normalized * normalized);
+        }
+
+        updateSound() {
+          if (!this.isPlaying) return;
+
+          const fundamental = parseFloat(
+            document.getElementById("fundamental").value,
+          );
+
+          this.oscillators.forEach((osc, i) => {
+            osc.frequency.value = fundamental * (i + 1);
+
+            // フォルマント振幅の再計算
+            const harmonicAmplitude =
+              1 /
+              Math.pow(
+                i + 1,
+                parseFloat(document.getElementById("harmonic-rolloff").value) /
+                  6,
+              );
+            const formantAmplitude = this.calculateFormantAmplitude(
+              fundamental * (i + 1),
+            );
+
+            this.gainNodes[i].gain.value = harmonicAmplitude * formantAmplitude;
+          });
+        }
+
+        stopSound() {
+          if (!this.isPlaying) return;
+
+          this.oscillators.forEach((osc) => osc.stop());
+          this.oscillators = [];
+          this.gainNodes = [];
+
+          if (this.audioContext) {
+            this.audioContext.close();
+            this.audioContext = null;
+          }
+
+          this.isPlaying = false;
+
+          document.getElementById("play-btn").disabled = false;
+          document.getElementById("stop-btn").disabled = true;
+        }
+      }
+
+      // 初期化
+      const synthesizer = new FormantSynthesizer();
+
+      // デフォルトで「あ」音を選択
+      document.querySelector('[data-vowel="a"]').click();
+
+      // 初期状態の設定
+      document.getElementById("stop-btn").disabled = true;
+    </script>
+  </body>
+</html>
